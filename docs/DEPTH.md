@@ -14,6 +14,7 @@
 | M5 换卷核算 | 确认领卷次序、实际坐标和欠料 | `GET /api/changeovers` | `app/modules/m5_changeovers/solver.py` `app/modules/m5_changeovers/placements.py` | `tests/test_changeovers.py` |
 | M6 用布勾稽 | 按卷审核切口守恒及源记录分流 | `GET /api/ledger` | `app/modules/m6_ledger/partition.py` `app/modules/m6_ledger/service.py` | `tests/test_ledger.py` |
 | M7 裁床签条 | 排版归档、同源重跑、按卷打印并下载卷宗 | `GET /api/slips` `POST /api/runs` | `app/modules/m7_slips/receipts.py` `app/modules/m7_slips/archiving.py` | `tests/test_slips.py` |
+| M8 换卷调拨 | 急单换卷签发调拨卷宗、对平核验、整批同版签条 | `POST /api/transfers` | `app/modules/m8_transfers/dossier.py` `app/modules/m8_transfers/archiving.py` | `tests/test_transfers.py` |
 
 ## 陷阱登记
 
@@ -33,9 +34,13 @@
 | TRAP-19 | R-001 两条带安全余量的疵区重叠 20 mm | 重复扣料或留出假缝 | 归并并集并合并源行 | `app/modules/m3_zones/intervals.py` | `tests/test_zones.py::test_overlapping_allowances_are_counted_once` |
 | TRAP-23 | R-005 的裁片和刀口刚好用尽到卷尾 | 漏计最后刀口或右端算两次 | 半开区间，最后刀口须完整容纳 | `app/modules/m5_changeovers/placements.py` | `tests/test_fit.py::test_kerf_exact_fit_succeeds_when_right_edge_is_exclusive` |
 | TRAP-26 | 已归档后改变源记录文件 | 陈旧重跑覆盖原裁片坐标 | 比较文件哈希及规则身份，返回 409 | `app/modules/m7_slips/archiving.py` | `tests/test_slips.py::test_stale_source_replay_is_rejected_without_rewriting_archive` |
+| TRAP-27 | 急单换卷但仓管要求整批同版 | 只换一卷造成新旧签条混用 | 调拨卷宗只重排换下卷，整批签条同发新版 | `app/modules/m8_transfers/dossier.py` | `tests/test_transfers.py::test_swap_rehomes_pieces_and_reissues_whole_batch_at_one_version` |
+| TRAP-28 | 同一调拨重复提交 | 每点一次多一版签条 | 调拨键哈希幂等，重跑复用原卷宗 | `app/modules/m8_transfers/archiving.py` | `tests/test_transfers.py::test_same_transfer_rerun_never_issues_another_slip_version` |
+| TRAP-29 | 换卷后账目未对平 | 签发后新旧两版都对不上 | 八项对平核验任一不过即拒签，旧版保留 | `app/modules/m8_transfers/archiving.py` | `tests/test_transfers.py::test_unbalanced_base_is_refused_and_old_slips_survive` |
 
 ## 勾稽与局限
 
 - 卷长逐卷校验，等于合格裁片、禁切、切口和未用段之和。封存卷全长算禁切。每个区间恰好在一类中。
 - 各来源原始条数等于有效、重复和隔离之和。疵点定位隔离会在最终条数账里移动分项。
 - 只做沿卷长的条带裁切。幅宽用于每片布种匹配和最小幅宽约束。精确规划上限与输入文件限制见数据字典。
+- 换卷调拨只重排换下卷的裁片，其余卷裁片坐标不变；放不下的裁片转欠料。换上卷可以是在册留存卷，也可以是按已验合格无禁切入册的新卷。调拨不改写原归档，整批签条以调拨版本同发；任一守恒核验不过即拒签，旧版签条保留。

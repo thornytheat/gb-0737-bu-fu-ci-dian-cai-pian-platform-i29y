@@ -47,8 +47,10 @@ export function drawAxis(book, slip) {
 function receipt(slip, manifest, kerf) {
   const content = tag("div", "", "receipt");
   const head = tag("div", "", "receipt-head");
-  head.append(tag("b", slip.serial), tag("span", slip.state, `stamp${slip.state === "封存" ? " held" : ""}`));
-  const meta = tag("p", `批次 ${shortId(manifest?.id)} · ${slip.fabric} · ${slip.width} mm`, "receipt-meta");
+  const voided = slip.state === "封存" || slip.state === "换下";
+  head.append(tag("b", slip.serial), tag("span", slip.state, `stamp${voided ? " held" : ""}`));
+  const label = manifest?.out_roll ? `调拨 ${shortId(manifest.id)} · 签条 V${manifest.version}` : `批次 ${shortId(manifest?.id)}`;
+  const meta = tag("p", `${label} · ${slip.fabric} · ${slip.width} mm`, "receipt-meta");
   if (manifest) meta.title = manifest.id;
   const sheet = tag("dl");
   const fields = [
@@ -57,6 +59,7 @@ function receipt(slip, manifest, kerf) {
     ["切口", `${slip.lengths.kerf} mm`], ["未用段", `${slip.lengths.unused} mm`],
     ["刀口设定", `${kerf} mm`], ["领卷次序", slip.sequence ?? "—"],
   ];
+  if (slip.version) fields.push(["签条版本", `V${slip.version}`]);
   for (const [name, value] of fields) sheet.append(tag("dt", name), tag("dd", value, "num"));
   content.append(head, meta, sheet);
   if (slip.pieces.length) {

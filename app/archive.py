@@ -26,6 +26,11 @@ class Archive:
                     seq INTEGER PRIMARY KEY, run TEXT REFERENCES runs(id) NOT NULL, time TEXT NOT NULL, action TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS recent_runs ON runs(time DESC, id DESC);
+                CREATE TABLE IF NOT EXISTS transfers (
+                    id TEXT PRIMARY KEY, run TEXT REFERENCES runs(id) NOT NULL,
+                    version INTEGER NOT NULL, time TEXT NOT NULL, document TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS run_transfers ON transfers(run, version);
             """)
 
     @contextmanager
@@ -52,6 +57,22 @@ class Archive:
                 "SELECT json_extract(document, '$.manifest') AS manifest FROM runs ORDER BY time DESC,id DESC LIMIT 30",
             )]
 
+    def read_transfer(self, transfer_id):
+        with closing(self.connect()) as db:
+            document = lookup_transfer(db, transfer_id)
+        if document is None:
+            raise FabricError("TRANSFER_UNKNOWN", 404)
+        return document
+
+    def transfers(self, run_id=None):
+        with closing(self.connect()) as db:
+            rows = db.execute(
+                "SELECT json_extract(document, '$.manifest') AS manifest FROM transfers "
+                + ("WHERE run=? " if run_id else "") + "ORDER BY time DESC, version DESC, id DESC LIMIT 30",
+                ((run_id,) if run_id else ()),
+            )
+            return [json.loads(row["manifest"]) for row in rows]
+
 
 def lookup(db, run_id):
     row = db.execute("SELECT document FROM runs WHERE id=?", (run_id,)).fetchone()
@@ -65,3 +86,18 @@ def save(db, document):
 
 def review(db, run_id, time, action):
     db.execute("INSERT INTO reviews (run,time,action) VALUES (?,?,?)", (run_id, time, action))
+
+
+def lookup_transfer(db, transfer_id):
+    row = db.execute("SELECT document FROM transfers WHERE id=?", (transfer_id,)).fetchone()
+    return json.loads(row["document"]) if row else None
+
+
+def save_transfer(db, document):
+    manifest = document["manifest"]
+    db.execute("INSERT INTO transfers VALUES (?,?,?,?,?)",
+               (manifest["id"], manifest["run_id"], manifest["version"], manifest["created_at"], canonical(document)))
+
+
+def transfer_count(db, run_id):
+    return db.execute("SELECT COUNT(*) AS n FROM transfers WHERE run=?", (run_id,)).fetchone()["n"]

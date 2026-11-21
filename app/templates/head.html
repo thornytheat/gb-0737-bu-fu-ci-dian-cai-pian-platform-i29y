@@ -14,5 +14,20 @@
     <button id="rerun" type="button" disabled>重跑</button>
     <a id="export" aria-disabled="true">导出卷宗</a>
   </form>
+  <form id="transfer-form" class="plan-form transfer-form" aria-label="换卷调拨">
+    <label>换下卷
+      <select id="out-roll" name="out_roll" required></select>
+    </label>
+    <label>换上卷
+      <select id="in-roll" name="in_roll" required></select>
+    </label>
+    <span id="new-roll-fields" class="new-roll-fields" hidden>
+      <label>新卷号 <input id="new-id" name="new_id" maxlength="20" placeholder="R-101"></label>
+      <label>布种 <input id="new-fabric" name="new_fabric" maxlength="10" placeholder="斜纹棉"></label>
+      <label>幅宽 mm <input id="new-width" name="new_width" type="number" min="1" max="4000" step="1"></label>
+      <label>卷长 mm <input id="new-length" name="new_length" type="number" min="1" max="1000000" step="1"></label>
+    </span>
+    <button class="ink-btn" id="swap" type="submit" disabled>换卷调拨</button>
+  </form>
 </header>
 <div id="operation" class="operation" role="status" hidden></div>

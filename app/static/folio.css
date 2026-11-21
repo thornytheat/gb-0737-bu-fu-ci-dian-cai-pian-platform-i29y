@@ -37,6 +37,9 @@ h1 { font: 750 clamp(21px, 2.2vw, 29px)/1.2 var(--font-title); letter-spacing: .
 .plan-form a { text-decoration: none; }
 .plan-form .ink-btn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 .plan-form :disabled, .plan-form [aria-disabled=true], .slip button:disabled { opacity: .54; }
+.transfer-form { flex-basis: 100%; padding-top: 9px; border-top: 1px dashed var(--line-strong); }
+.transfer-form input[type="number"] { width: 84px; }
+.new-roll-fields { display: contents; }
 button:not(:disabled), a[href] { transition: background var(--ease); }
 .plan-form a[href]:hover, .plan-form button:not(:disabled):hover, .slip button:not(:disabled):hover { background: var(--accent-wash); color: var(--ink); }
 .operation { margin: 12px 22px 0; padding: 5px 10px; border-left: 3px solid var(--good); background: var(--paper); }

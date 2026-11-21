@@ -12,13 +12,21 @@ MESSAGES = {
     "SEGMENT_TOO_SHORT": "无单段可容纳该裁片", "CAPACITY_USED": "可用段已由求解方案分配",
     "STALE_RUN": "样例、刀口或规则版本已变更", "REPLAY_DIFF": "重算方案与归档不同",
     "STORE_BUSY": "归档库暂忙", "FORM_INVALID": "参数无效，检查刀口值",
+    "TRANSFER_SAME_ROLL": "换下与换上不能同卷", "OUT_ROLL_UNUSED": "换下卷不在本批领卷序列",
+    "IN_ROLL_UNKNOWN": "换上卷不在本批卷册", "IN_ROLL_HELD": "换上卷已封存，不能调拨",
+    "IN_ROLL_BUSY": "换上卷已在本批领用", "IN_ROLL_DUPLICATE": "新卷号与本批在册卷重复",
+    "TRANSFER_UNBALANCED": "换卷后未对平，保留旧版签条",
+    "TRANSFER_UNKNOWN": "调拨卷宗不存在",
 }
 
 
 class FabricError(Exception):
-    def __init__(self, code, status=422, *, file=None, line=None):
-        self.code, self.status, self.file, self.line = code, status, file, line
+    def __init__(self, code, status=422, *, file=None, line=None, details=None):
+        self.code, self.status, self.file, self.line, self.details = code, status, file, line, details
         super().__init__(MESSAGES[code])
 
     def response(self):
-        return {"code": self.code, "message": str(self), "file": self.file, "line": self.line}
+        result = {"code": self.code, "message": str(self), "file": self.file, "line": self.line}
+        if self.details is not None:
+            result["details"] = self.details
+        return result

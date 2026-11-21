@@ -14,7 +14,7 @@ const orderColumns = [column("订单号", (r) => r.id), column("布种", (r) => 
 const spanColumns = [column("起点 mm", (r) => r.start, true), column("终点 mm", (r) => r.end, true),
   column("长度 mm", (r) => r.end - r.start, true), column("依据", (r) => list(r.refs))];
 
-export function views(stage, data, activeRoll, history) {
+export function views(stage, data, activeRoll, history, dossier, transfers) {
   const roll = data?.zones.rolls.find((row) => row.id === activeRoll);
   switch (stage) {
     case "intake": return [
@@ -64,6 +64,29 @@ export function views(stage, data, activeRoll, history) {
       ["归档历史", history, [column("批次号", (r) => ({text: r.id.slice(0, 12), run: r.id})), column("验布单", (r) => r.inputs.defects.file),
         column("刀口 mm", (r) => r.kerf_mm, true), column("片数", (r) => r.piece_count, true), column("归档 UTC", (r) => r.created_at)]],
     ];
+    case "transfers": return [
+      ["裁片调拨", dossier?.pieces, [column("裁片", (r) => r.id), column("工单", (r) => r.order),
+        column("原卷", (r) => r.from.roll), column("原段 mm", (r) => interval([r.from.start, r.from.end]), true),
+        column("新卷", (r) => r.to?.roll), column("新段 mm", (r) => r.to && interval([r.to.start, r.to.end]), true),
+        column("刀口终点 mm", (r) => r.to?.kerf_end, true), column("去向", (r) => r.status),
+        column("欠料原因", (r) => r.reason?.message)]],
+      ["欠料变化", dossier?.orders, [column("订单号", (r) => r.order), column("优先", (r) => r.priority),
+        column("需求", (r) => r.requested, true), column("原已排", (r) => r.planned_before, true),
+        column("新已排", (r) => r.planned_after, true), column("原待补", (r) => r.remaining_before, true),
+        column("新待补", (r) => r.remaining_after, true),
+        column("待补变化", (r) => r.remaining_after - r.remaining_before, true)]],
+      ["余量与签条", dossier?.rolls, [column("卷号", (r) => r.roll), column("原状态", (r) => r.state_before),
+        column("新状态", (r) => r.state_after), column("原未用 mm", (r) => r.lengths_before.unused, true),
+        column("新未用 mm", (r) => r.lengths_after.unused, true), column("余量变化 mm", (r) => r.unused_delta, true),
+        column("新领卷次序", (r) => r.sequence_after, true),
+        column("签条版本", () => (dossier ? `V${dossier.manifest.version}` : "—"))]],
+      ["对平核验", dossier?.checks, [column("核验", (r) => r.label), column("结果", (r) => (r.ok ? "通过" : "未过")),
+        column("说明", (r) => r.detail)]],
+      ["调拨历史", transfers, [column("调拨号", (r) => ({text: r.id.slice(0, 12), transfer: r.id})),
+        column("换下卷", (r) => r.out_roll), column("换上卷", (r) => r.in_roll),
+        column("签条版本", (r) => `V${r.version}`), column("调拨片数", (r) => r.moved, true),
+        column("欠料片数", (r) => r.short, true), column("登记 UTC", (r) => r.created_at)]],
+    ];
     default: throw new Error("模块不存在");
   }
 }
@@ -94,6 +117,7 @@ export function drawTable(tab) {
         const button = tag("button", value.text);
         button.type = "button";
         if (value.run) button.dataset.open = value.run;
+        if (value.transfer) button.dataset.transfer = value.transfer;
         if (value.roll) button.dataset.roll = value.roll;
         cell.append(button);
       } else {
